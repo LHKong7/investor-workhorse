@@ -33,6 +33,7 @@ export interface SessionPayload {
   email?: string; // 用户邮箱
   iat?: number;
   exp?: number;
+  [key: string]: any; // Index signature for JWTPayload compatibility
 }
 
 // ========================================

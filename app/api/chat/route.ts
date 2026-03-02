@@ -96,17 +96,17 @@ export async function POST(req: NextRequest) {
   }
 
   // 获取已验证的会话信息（包含用户邮箱）
-  const session = await getVerifiedSession(req);
+  const userSession = await getVerifiedSession(req);
 
   try {
     const { message, sessionId } = await req.json();
 
     // 异步记录用户使用情况（如果配置了 Google Sheets）
-    if (session?.email && validateGoogleSheetsConfig().valid) {
+    if (userSession?.email && validateGoogleSheetsConfig().valid) {
       const timestamp = new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' });
       recordUserUsageAsync({
         timestamp,
-        email: session.email,
+        email: userSession.email,
         action: '使用 Agent 对话',
         messageLength: message.length,
         estimatedTokens: Math.ceil(message.length / 2), // 简单估算 token 数量
@@ -120,8 +120,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Get or create session
-    const session = baseAgent.restoreSession(sessionId ?? '') ?? baseAgent.createSession();
+    // Get or create agent session
+    const agentSession = baseAgent.restoreSession(sessionId ?? '') ?? baseAgent.createSession();
 
     // Create a readable stream for SSE
     const encoder = new TextEncoder();
@@ -134,11 +134,11 @@ export async function POST(req: NextRequest) {
 
         try {
           // Save user message to session
-          await addSessionMessage(session.id, 'user', message);
+          await addSessionMessage(agentSession.id, 'user', message);
 
           // Get session-specific agent with file writer tool
-          const sessionAgent = getAgentForSession(session.id);
-          const sessionWithTool = sessionAgent.restoreSession(session.id) || sessionAgent.createSession();
+          const sessionAgent = getAgentForSession(agentSession.id);
+          const sessionWithTool = sessionAgent.restoreSession(agentSession.id) || sessionAgent.createSession();
 
           // Stream the response from agent
           const streamGenerator = sessionWithTool.stream(message);
@@ -151,7 +151,7 @@ export async function POST(req: NextRequest) {
               fullContent += chunk.delta;
               sendEvent('chunk', {
                 delta: chunk.delta,
-                sessionId: session.id,
+                sessionId: agentSession.id,
               });
             }
 
@@ -159,16 +159,16 @@ export async function POST(req: NextRequest) {
               const finalContent = chunk.reply || fullContent;
 
               // Save assistant response to session
-              await addSessionMessage(session.id, 'assistant', finalContent);
+              await addSessionMessage(agentSession.id, 'assistant', finalContent);
 
               // Send the final complete reply
               sendEvent('reply', {
                 content: finalContent,
-                sessionId: session.id,
+                sessionId: agentSession.id,
               });
 
               // Send completion event
-              sendEvent('done', { sessionId: session.id });
+              sendEvent('done', { sessionId: agentSession.id });
 
               break;
             }

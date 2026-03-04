@@ -8,7 +8,8 @@ import {
   saveSessionFile,
   addSessionMessage,
   getSessionData,
-  createFileWriterTool
+  createFileWriterTool,
+  addAnalysisStep
 } from '@/lib/blob-session-storage';
 import { validateApiAuth } from '@/lib/api-auth';
 import { createVercelBlobStorage } from '@/lib/vercel-agent-storage';
@@ -248,6 +249,13 @@ export async function POST(req: NextRequest) {
           // Add user message (file upload) to session
           await addSessionMessage(session.id, 'user', `[Uploaded file: ${file.name}]\n\nFile content analysis request:`);
 
+          // Record analysis start step
+          await addAnalysisStep(session.id, {
+            type: 'info',
+            title: '开始分析',
+            description: `开始分析文件: ${file.name} (${(fileContent.length / 1024).toFixed(2)} KB)`
+          });
+
           // Analyze the financial report with streaming
           const analysisPrompt = `Please analyze the following financial report content and provide a comprehensive analysis:\n\n${fileContent}`;
 
@@ -272,7 +280,18 @@ export async function POST(req: NextRequest) {
               // Save assistant response to session
               await addSessionMessage(session.id, 'assistant', finalContent);
 
-              // Get session data to include files
+              // Record analysis completion step
+              await addAnalysisStep(session.id, {
+                type: 'result',
+                title: '分析完成',
+                description: `生成分析报告 (${finalContent.length} 字符)`,
+                metadata: {
+                  contentLength: finalContent.length,
+                  wordCount: finalContent.split(/\s+/).length
+                }
+              });
+
+              // Get session data to include files and steps
               const sessionData = await getSessionData(session.id);
 
               // Send the final complete analysis
@@ -281,6 +300,7 @@ export async function POST(req: NextRequest) {
                 sessionId: session.id,
                 fileName: file.name,
                 files: sessionData?.files || [],
+                analysisSteps: sessionData?.analysisSteps || [],
               });
 
               // Send completion event with files

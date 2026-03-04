@@ -41,10 +41,21 @@ export interface SessionMessage {
   timestamp: string;
 }
 
+export interface AnalysisStep {
+  stepId: string;
+  type: 'info' | 'progress' | 'tool_call' | 'thinking' | 'result';
+  title: string;
+  description?: string;
+  timestamp: string;
+  duration?: number; // in milliseconds
+  metadata?: Record<string, any>;
+}
+
 export interface SessionData {
   metadata: SessionMetadata;
   files: SessionFile[];
   messages: SessionMessage[];
+  analysisSteps?: AnalysisStep[]; // 添加分析步骤数组
 }
 
 // Blob path prefixes
@@ -69,6 +80,13 @@ function getFilesIndexPath(sessionId: string): string {
  */
 function getMessagesPath(sessionId: string): string {
   return `${SESSIONS_PREFIX}${sessionId}/messages.json`;
+}
+
+/**
+ * Get the blob path for a session's analysis steps
+ */
+function getAnalysisStepsPath(sessionId: string): string {
+  return `${SESSIONS_PREFIX}${sessionId}/analysis-steps.json`;
 }
 
 /**
@@ -295,11 +313,12 @@ export async function getSessionData(sessionId: string): Promise<SessionData | n
     const metadataPath = getMetadataPath(sessionId);
     const filesIndexPath = getFilesIndexPath(sessionId);
     const messagesPath = getMessagesPath(sessionId);
+    const stepsPath = getAnalysisStepsPath(sessionId);
 
     const [metadataBlob, filesIndexBlob, messagesBlob] = await Promise.all([
-      head(metadataPath),
-      head(filesIndexPath),
-      head(messagesPath),
+      safeHead(metadataPath),
+      safeHead(filesIndexPath),
+      safeHead(messagesPath),
     ]);
 
     if (!metadataBlob || !filesIndexBlob || !messagesBlob) {
@@ -312,10 +331,23 @@ export async function getSessionData(sessionId: string): Promise<SessionData | n
       fetch(messagesBlob.url).then(r => r.json()),
     ]);
 
+    // Get analysis steps if they exist
+    let analysisSteps: AnalysisStep[] = [];
+    const stepsBlob = await safeHead(stepsPath);
+    if (stepsBlob) {
+      try {
+        const stepsResponse = await fetch(stepsBlob.url);
+        analysisSteps = await stepsResponse.json();
+      } catch (e) {
+        analysisSteps = [];
+      }
+    }
+
     return {
       metadata,
       files,
       messages,
+      analysisSteps,
     };
   } catch (error) {
     console.error('Error getting session data:', error);
@@ -460,4 +492,83 @@ export function createFileWriterTool(sessionId: string) {
       }
     },
   };
+}
+
+/**
+ * Analysis Steps Management Functions
+ */
+
+/**
+ * Add an analysis step to a session
+ */
+export async function addAnalysisStep(
+  sessionId: string,
+  step: Omit<AnalysisStep, 'stepId' | 'timestamp'>
+): Promise<string> {
+  const stepsPath = getAnalysisStepsPath(sessionId);
+  const stepsBlob = await safeHead(stepsPath);
+
+  let steps: AnalysisStep[] = [];
+
+  if (stepsBlob) {
+    try {
+      const response = await fetch(stepsBlob.url);
+      steps = await response.json();
+    } catch (e) {
+      // If parsing fails, start with empty array
+      steps = [];
+    }
+  }
+
+  // Create new step
+  const newStep: AnalysisStep = {
+    stepId: 'step-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9),
+    timestamp: new Date().toISOString(),
+    ...step,
+  };
+
+  steps.push(newStep);
+
+  // Save updated steps
+  await put(stepsPath, JSON.stringify(steps, null, 2), {
+    access: 'public',
+    addRandomSuffix: false,
+    allowOverwrite: true,
+  });
+
+  return newStep.stepId;
+}
+
+/**
+ * Get all analysis steps for a session
+ */
+export async function getAnalysisSteps(sessionId: string): Promise<AnalysisStep[]> {
+  const stepsPath = getAnalysisStepsPath(sessionId);
+  const stepsBlob = await safeHead(stepsPath);
+
+  if (!stepsBlob) {
+    return [];
+  }
+
+  try {
+    const response = await fetch(stepsBlob.url);
+    const steps = await response.json();
+    return steps || [];
+  } catch (e) {
+    return [];
+  }
+}
+
+/**
+ * Clear all analysis steps for a session
+ */
+export async function clearAnalysisSteps(sessionId: string): Promise<void> {
+  const stepsPath = getAnalysisStepsPath(sessionId);
+  
+  // Save empty array
+  await put(stepsPath, JSON.stringify([], null, 2), {
+    access: 'public',
+    addRandomSuffix: false,
+    allowOverwrite: true,
+  });
 }

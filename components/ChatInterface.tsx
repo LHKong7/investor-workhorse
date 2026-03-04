@@ -14,6 +14,15 @@ interface Analysis {
     originalName: string;
     size: number;
   }>;
+  analysisSteps?: Array<{
+    stepId: string;
+    type: 'info' | 'progress' | 'tool_call' | 'thinking' | 'result';
+    title: string;
+    description?: string;
+    timestamp: string;
+    duration?: number;
+    metadata?: Record<string, any>;
+  }>;
 }
 
 interface SessionFile {
@@ -183,6 +192,7 @@ export default function ChatInterface() {
                   timestamp: new Date(),
                   sessionId: data.sessionId,
                   files: data.files,
+                  analysisSteps: data.analysisSteps,
                 });
               } else if (currentEvent === 'done') {
                 // Move streaming analysis to permanent list
@@ -195,6 +205,7 @@ export default function ChatInterface() {
                     timestamp: new Date(),
                     sessionId: data.sessionId,
                     files: data.files,
+                    analysisSteps: streamingAnalysis?.analysisSteps || [],
                   },
                   ...prev,
                 ]);

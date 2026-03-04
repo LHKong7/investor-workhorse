@@ -33,18 +33,18 @@ class VercelBlobSessionStore implements SessionStore {
     return `${AGENT_PREFIX}sessions/${sessionId}.json`;
   }
 
-  async getAsync(sessionId: string): Promise<Record<string, any> | null> {
+  async get(sessionId: string): Promise<Record<string, any> | null> {
+    // Check cache first
+    if (this.cache.has(sessionId)) {
+      return this.cache.get(sessionId)!;
+    }
+
     try {
       const key = this.getKey(sessionId);
       const blob = await head(key);
 
       if (!blob) {
         return null;
-      }
-
-      // Check cache first
-      if (this.cache.has(sessionId)) {
-        return this.cache.get(sessionId)!;
       }
 
       // Fetch from blob
@@ -60,12 +60,7 @@ class VercelBlobSessionStore implements SessionStore {
     }
   }
 
-  get(sessionId: string): Record<string, any> | null {
-    // Synchronous version - return from cache
-    return this.cache.get(sessionId) || null;
-  }
-
-  async putAsync(sessionId: string, data: Record<string, any>): Promise<void> {
+  async put(sessionId: string, data: Record<string, any>): Promise<void> {
     const key = this.getKey(sessionId);
 
     // Upload to Vercel Blob
@@ -79,12 +74,7 @@ class VercelBlobSessionStore implements SessionStore {
     this.cache.set(sessionId, data);
   }
 
-  put(sessionId: string, data: Record<string, any>): void {
-    // Async fire-and-forget
-    this.putAsync(sessionId, data);
-  }
-
-  async listIdsAsync(): Promise<string[]> {
+  async listIds(): Promise<string[]> {
     try {
       const result = await list({ prefix: `${AGENT_PREFIX}sessions/` });
       return result.blobs
@@ -98,18 +88,13 @@ class VercelBlobSessionStore implements SessionStore {
     }
   }
 
-  listIds(): string[] {
-    // Return from cache or empty
-    return Array.from(this.cache.keys());
-  }
-
-  async listSummariesAsync(limit?: number): Promise<Record<string, any>[]> {
+  async listSummaries(limit?: number): Promise<Record<string, any>[]> {
     try {
-      const ids = await this.listIdsAsync();
+      const ids = await this.listIds();
       const summaries: Record<string, any>[] = [];
 
       for (const id of ids) {
-        const data = await this.getAsync(id);
+        const data = await this.get(id);
         if (data) {
           summaries.push(data);
         }
@@ -123,11 +108,6 @@ class VercelBlobSessionStore implements SessionStore {
       return [];
     }
   }
-
-  listSummaries(limit?: number): Record<string, any>[] {
-    // Return from cache
-    return Array.from(this.cache.values()).slice(0, limit);
-  }
 }
 
 /**
@@ -137,7 +117,7 @@ class VercelBlobMemoryStore implements MemoryStore {
   private memoryKey = `${AGENT_PREFIX}memory.json`;
   private cache: Record<string, any>[] = [];
 
-  async loadAsync(): Promise<Record<string, any>[]> {
+  async load(): Promise<Record<string, any>[]> {
     try {
       const blob = await head(this.memoryKey);
 
@@ -155,11 +135,7 @@ class VercelBlobMemoryStore implements MemoryStore {
     }
   }
 
-  load(): Record<string, any>[] {
-    return this.cache;
-  }
-
-  async saveAsync(items: Record<string, any>[]): Promise<void> {
+  async save(items: Record<string, any>[]): Promise<void> {
     // Upload to Vercel Blob
     await put(this.memoryKey, JSON.stringify(items, null, 2), {
       access: 'public',
@@ -168,11 +144,6 @@ class VercelBlobMemoryStore implements MemoryStore {
     });
 
     this.cache = items;
-  }
-
-  save(items: Record<string, any>[]): void {
-    // Async fire-and-forget
-    this.saveAsync(items);
   }
 }
 
@@ -186,7 +157,7 @@ class VercelBlobSkillStore implements SkillStore {
     return `${AGENT_PREFIX}skills/${name}.json`;
   }
 
-  async getSkillAsync(name: string): Promise<Record<string, any> | null> {
+  async getSkill(name: string): Promise<Record<string, any> | null> {
     try {
       // Check cache first
       if (this.cache.has(name)) {
@@ -212,11 +183,7 @@ class VercelBlobSkillStore implements SkillStore {
     }
   }
 
-  getSkill(name: string): Record<string, any> | null {
-    return this.cache.get(name) || null;
-  }
-
-  async listSkillsAsync(): Promise<string[]> {
+  async listSkills(): Promise<string[]> {
     try {
       const result = await list({ prefix: `${AGENT_PREFIX}skills/` });
       return result.blobs
@@ -230,11 +197,7 @@ class VercelBlobSkillStore implements SkillStore {
     }
   }
 
-  listSkills(): string[] {
-    return Array.from(this.cache.keys());
-  }
-
-  async registerSkillAsync(name: string, skill: Record<string, any>): Promise<void> {
+  async registerSkill(name: string, skill: Record<string, any>): Promise<void> {
     const key = this.getSkillKey(name);
 
     // Upload to Vercel Blob
@@ -246,11 +209,6 @@ class VercelBlobSkillStore implements SkillStore {
 
     // Update cache
     this.cache.set(name, skill);
-  }
-
-  registerSkill(name: string, skill: Record<string, any>): void {
-    // Async fire-and-forget
-    this.registerSkillAsync(name, skill);
   }
 }
 
@@ -264,7 +222,7 @@ class VercelBlobContextStore implements ContextStore {
     return `${AGENT_PREFIX}contexts/${sessionId}.json`;
   }
 
-  async getAsync(sessionId: string): Promise<Record<string, any> | null> {
+  async get(sessionId: string): Promise<Record<string, any> | null> {
     try {
       // Check cache first
       if (this.cache.has(sessionId)) {
@@ -290,12 +248,7 @@ class VercelBlobContextStore implements ContextStore {
     }
   }
 
-  get(sessionId: string): Record<string, any> | null {
-    // Synchronous version - return from cache
-    return this.cache.get(sessionId) || null;
-  }
-
-  async setAsync(sessionId: string, data: Record<string, any>): Promise<void> {
+  async set(sessionId: string, data: Record<string, any>): Promise<void> {
     const key = this.getContextKey(sessionId);
 
     // Upload to Vercel Blob
@@ -307,11 +260,6 @@ class VercelBlobContextStore implements ContextStore {
 
     // Update cache
     this.cache.set(sessionId, data);
-  }
-
-  set(sessionId: string, data: Record<string, any>): void {
-    // Async fire-and-forget
-    this.setAsync(sessionId, data);
   }
 }
 

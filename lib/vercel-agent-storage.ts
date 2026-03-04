@@ -40,7 +40,7 @@ export class VercelBlobSessionStore implements SessionStore {
     }
 
     try {
-      const blob = await head({ key: this.getKey(sessionId) });
+      const blob = await head(this.getKey(sessionId));
       if (!blob) {
         return null;
       }
@@ -123,26 +123,29 @@ export class VercelBlobSessionStore implements SessionStore {
  * 存储和检索长期记忆数据
  */
 export class VercelBlobMemoryStore implements MemoryStore {
-  private cache: Record<string, any>[] | null = null;
+  private cache: Record<string, any>[] = [];
+  private loaded = false;
   private memoryKey = `${MEMORY_PREFIX}data`;
 
   async load(): Promise<Record<string, any>[]> {
     // Return cached data if available
-    if (this.cache !== null) {
+    if (this.loaded) {
       return this.cache;
     }
 
     try {
-      const blob = await head({ key: this.memoryKey });
+      const blob = await head(this.memoryKey);
       if (!blob) {
         this.cache = [];
+        this.loaded = true;
         return this.cache;
       }
 
       const response = await fetch(blob.url);
       const data = await response.json();
 
-      this.cache = data || [];
+      this.cache = Array.isArray(data) ? data : [];
+      this.loaded = true;
       return this.cache;
     } catch (error: any) {
       // Handle "blob does not exist" error
@@ -150,6 +153,7 @@ export class VercelBlobMemoryStore implements MemoryStore {
           error.message?.includes('not found') ||
           error.statusCode === 404) {
         this.cache = [];
+        this.loaded = true;
         return this.cache;
       }
       // Re-throw other errors
@@ -167,6 +171,7 @@ export class VercelBlobMemoryStore implements MemoryStore {
     });
 
     this.cache = items;
+    this.loaded = true;
   }
 }
 
@@ -188,7 +193,7 @@ export class VercelBlobContextStore implements ContextStore {
     }
 
     try {
-      const blob = await head({ key: this.getKey(sessionId) });
+      const blob = await head(this.getKey(sessionId));
       if (!blob) {
         return null;
       }

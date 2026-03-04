@@ -114,6 +114,10 @@ export default function ChatInterface() {
       formData.append('sessionId', sessionId);
     }
 
+    // Declare variables outside try block for error handling access
+    let currentContent = '';
+    let fileName = selectedFile.name;
+
     try {
       const response = await fetch('/api/analyze', {
         method: 'POST',
@@ -134,8 +138,6 @@ export default function ChatInterface() {
 
       let buffer = '';
       let currentEvent = '';
-      let currentContent = '';
-      let fileName = selectedFile.name;
 
       while (true) {
         const { done, value } = await reader.read();
@@ -173,8 +175,8 @@ export default function ChatInterface() {
                 });
                 setProgressMessage('Analyzing...');
               } else if (currentEvent === 'analysis') {
-                // Final complete analysis
-                currentContent = data.content;
+                // Final complete analysis - preserve accumulated content if data.content is empty
+                currentContent = data.content || currentContent;
                 setStreamingAnalysis({
                   fileName: data.fileName,
                   content: currentContent,
@@ -184,10 +186,12 @@ export default function ChatInterface() {
                 });
               } else if (currentEvent === 'done') {
                 // Move streaming analysis to permanent list
+                // Ensure we use the accumulated content if data.content is not provided
+                const finalContent = data.content || currentContent;
                 setAnalyses((prev) => [
                   {
                     fileName: data.fileName || fileName,
-                    content: currentContent,
+                    content: finalContent,
                     timestamp: new Date(),
                     sessionId: data.sessionId,
                     files: data.files,
@@ -213,6 +217,21 @@ export default function ChatInterface() {
     } catch (error) {
       console.error('Error analyzing file:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to analyze the file. Please try again.';
+
+      // Save any accumulated content before error
+      if (currentContent && fileName) {
+        setAnalyses((prev) => [
+          {
+            fileName,
+            content: currentContent,
+            timestamp: new Date(),
+            sessionId: sessionId || '',
+            files: [],
+          },
+          ...prev,
+        ]);
+      }
+
       alert(errorMessage);
       setStreamingAnalysis(null);
     } finally {
@@ -232,6 +251,9 @@ export default function ChatInterface() {
     setIsLoading(true);
     setProgressMessage('Thinking...');
     setStreamingMessage(null);
+
+    // Declare variable outside try block for error handling access
+    let currentContent = '';
 
     try {
       const response = await fetch('/api/chat', {
@@ -258,7 +280,6 @@ export default function ChatInterface() {
 
       let buffer = '';
       let currentEvent = '';
-      let currentContent = '';
 
       while (true) {
         const { done, value } = await reader.read();
@@ -288,17 +309,19 @@ export default function ChatInterface() {
                 });
                 setProgressMessage('Responding...');
               } else if (currentEvent === 'reply') {
-                // Final complete reply
-                currentContent = data.content;
+                // Final complete reply - preserve accumulated content if data.content is empty
+                currentContent = data.content || currentContent;
                 setStreamingMessage({
                   role: 'assistant',
                   content: currentContent,
                 });
               } else if (currentEvent === 'done') {
                 // Move streaming message to permanent list
+                // Ensure we use the accumulated content if data.content is not provided
+                const finalContent = data.content || currentContent;
                 setMessages((prev) => [
                   ...prev,
-                  { role: 'assistant', content: currentContent },
+                  { role: 'assistant', content: finalContent },
                 ]);
                 setSessionId(data.sessionId);
                 setStreamingMessage(null);
@@ -315,13 +338,22 @@ export default function ChatInterface() {
       }
     } catch (error) {
       console.error('Error sending message:', error);
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: 'assistant',
-          content: 'Sorry, something went wrong. Please try again.',
-        },
-      ]);
+
+      // Save any accumulated content before error
+      if (currentContent) {
+        setMessages((prev) => [
+          ...prev,
+          { role: 'assistant', content: currentContent },
+        ]);
+      } else {
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: 'assistant',
+            content: 'Sorry, something went wrong. Please try again.',
+          },
+        ]);
+      }
       setStreamingMessage(null);
     } finally {
       setIsLoading(false);

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAllSessions } from '@/lib/session-storage';
+import { getAllSessions } from '@/lib/blob-session-storage';
 
 /**
  * GET /api/sessions - Get all sessions

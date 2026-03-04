@@ -6,16 +6,18 @@ import {
   addSessionMessage,
   getSessionData,
   createFileWriterTool
-} from '@/lib/session-storage';
+} from '@/lib/blob-session-storage';
 import { validateApiAuth } from '@/lib/api-auth';
 import { getVerifiedSession } from '@/lib/api-auth';
 import { recordUserUsageAsync, validateGoogleSheetsConfig } from '@/lib/google-sheets';
+import { createVercelBlobStorage } from '@/lib/vercel-agent-storage';
 
 // Load configuration
 const config = loadFinancialAnalystConfig();
 const modelConfig = getModelConfig(config);
 
 // Initialize the agent for chat with streaming enabled
+// 使用 Vercel Blob 自定义存储后端
 const baseAgent = new AgentBuilder()
   .setLLM({
     apiKey: process.env.OPENAI_API_KEY!,
@@ -47,6 +49,7 @@ ${config.system.language_support.instructions}
 - Reference specific sections from the analysis when relevant`)
   .setIncludeBuiltinTools(modelConfig.tools.builtin)
   .enableStreaming(true)  // Enable streaming
+  .setStorage({ backend: 'memory', custom: createVercelBlobStorage() })  // 使用 Vercel Blob 存储
   .build();
 
 // Create a function to get agent with session-specific tools
@@ -84,6 +87,7 @@ ${config.system.language_support.instructions}
 - Reference specific sections from the analysis when relevant`)
     .setIncludeBuiltinTools(modelConfig.tools.builtin)
     .enableStreaming(true)
+    .setStorage({ backend: 'memory', custom: createVercelBlobStorage() })  // 使用 Vercel Blob 存储
     .addTool(fileWriterTool)
     .build();
 }
@@ -121,7 +125,10 @@ export async function POST(req: NextRequest) {
     }
 
     // Get or create agent session
-    const agentSession = baseAgent.restoreSession(sessionId ?? '') ?? baseAgent.createSession();
+    let agentSession = await baseAgent.restoreSession(sessionId ?? '');
+    if (!agentSession) {
+      agentSession = await baseAgent.createSession();
+    }
 
     // Create a readable stream for SSE
     const encoder = new TextEncoder();
@@ -138,7 +145,10 @@ export async function POST(req: NextRequest) {
 
           // Get session-specific agent with file writer tool
           const sessionAgent = getAgentForSession(agentSession.id);
-          const sessionWithTool = sessionAgent.restoreSession(agentSession.id) || sessionAgent.createSession();
+          let sessionWithTool = await sessionAgent.restoreSession(agentSession.id);
+          if (!sessionWithTool) {
+            sessionWithTool = await sessionAgent.createSession();
+          }
 
           // Stream the response from agent
           const streamGenerator = sessionWithTool.stream(message);

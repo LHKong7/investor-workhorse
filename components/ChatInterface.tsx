@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import MarkdownRenderer from './MarkdownRenderer';
 
 interface Analysis {
   fileName: string;
@@ -417,41 +418,45 @@ export default function ChatInterface() {
   };
 
   return (
-    <div className="flex flex-col h-screen max-w-6xl mx-auto bg-white dark:bg-black">
+    <div className="flex flex-col h-screen max-w-6xl mx-auto bg-gradient-to-br from-gray-50 to-white dark:from-gray-950 dark:to-black">
       {/* Header */}
-      <div className="flex-none p-4 border-b border-zinc-200 dark:border-zinc-800">
+      <div className="flex-none px-6 py-4 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-lg border-b border-gray-200 dark:border-zinc-800 shadow-sm">
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-50">
-              AlphaMiner
-            </h1>
-            <p className="text-gray-600 dark:text-gray-400">
-              powered by BorderlessAgent
-            </p>
-            <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1">
-              Upload financial reports/财报 (PDF, DOCX, TXT) for AI-powered analysis
-            </p>
+          <div className="flex items-center space-x-4">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-lg">
+              <span className="text-xl font-bold text-white">α</span>
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                AlphaMiner
+              </h1>
+              <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">
+                AI-Powered Financial Analysis
+              </p>
+            </div>
           </div>
           <button
             onClick={handleLogout}
-            className="px-4 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors"
+            className="group px-4 py-2.5 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl font-medium hover:from-red-600 hover:to-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-all duration-200 shadow-md hover:shadow-lg"
             title="登出 (Logout)"
           >
             <span className="flex items-center space-x-2">
-              <span>🚪</span>
-              <span>登出</span>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              </svg>
+              <span className="hidden sm:inline">登出</span>
             </span>
           </button>
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-6">
+      <div className="flex-1 overflow-y-auto p-6 space-y-8">
         {/* File Upload Section */}
         <div
-          className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+          className={`relative border-2 border-dashed rounded-2xl p-10 text-center transition-all duration-300 ${
             isDragging
-              ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-              : 'border-zinc-300 dark:border-zinc-700 hover:border-zinc-400'
+              ? 'border-blue-500 bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-900/30 dark:to-purple-900/30 shadow-lg scale-[1.02]'
+              : 'border-gray-300 dark:border-zinc-700 hover:border-blue-400 dark:hover:border-blue-600 bg-white dark:bg-zinc-900/50 shadow-md hover:shadow-lg'
           }`}
           onDrop={handleDrop}
           onDragOver={handleDragOver}
@@ -464,56 +469,99 @@ export default function ChatInterface() {
             onChange={(e) => e.target.files && handleFileSelect(e.target.files[0])}
             className="hidden"
           />
-          <div className="space-y-4">
-            <div className="text-4xl">📄</div>
+          <div className="space-y-6">
+            <div className="flex justify-center">
+              <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900/50 dark:to-purple-900/50 flex items-center justify-center shadow-inner">
+                <svg className="w-10 h-10 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                </svg>
+              </div>
+            </div>
             <div>
-              <p className="text-lg font-medium text-zinc-900 dark:text-zinc-50">
+              <p className="text-xl font-bold text-gray-900 dark:text-white mb-2">
                 Upload Financial Report
               </p>
-              <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1">
-                Drag and drop or click to select
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Drag & drop your file here, or browse
               </p>
             </div>
-            <p className="text-xs text-zinc-500 dark:text-zinc-500">
-              Supports PDF, DOCX, and TXT files
-            </p>
+            <div className="flex items-center justify-center space-x-4 text-xs text-gray-500 dark:text-gray-500">
+              <span className="flex items-center space-x-1">
+                <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+                <span>PDF</span>
+              </span>
+              <span className="flex items-center space-x-1">
+                <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                <span>DOCX</span>
+              </span>
+              <span className="flex items-center space-x-1">
+                <span className="w-2 h-2 rounded-full bg-purple-500"></span>
+                <span>TXT</span>
+              </span>
+            </div>
             <button
               onClick={() => fileInputRef.current?.click()}
               disabled={isLoading}
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="group px-8 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-semibold hover:from-blue-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-md hover:shadow-lg"
             >
-              Select File
+              <span className="flex items-center space-x-2">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                </svg>
+                <span>Select File</span>
+              </span>
             </button>
           </div>
 
           {selectedFile && (
-            <div className="mt-4 p-4 bg-zinc-100 dark:bg-zinc-800 rounded-lg">
+            <div className="absolute inset-x-0 bottom-0 mx-4 mb-4 p-4 bg-white dark:bg-zinc-800 rounded-xl shadow-lg border border-gray-200 dark:border-zinc-700 animate-in slide-in-from-bottom-2 duration-300">
               <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <span className="text-2xl">📎</span>
-                  <div className="text-left">
-                    <p className="text-sm font-medium text-zinc-900 dark:text-zinc-50">
+                <div className="flex items-center space-x-3 flex-1 min-w-0">
+                  <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900/50 dark:to-purple-900/50 flex items-center justify-center">
+                    <svg className="w-5 h-5 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">
                       {selectedFile.name}
                     </p>
-                    <p className="text-xs text-zinc-600 dark:text-zinc-400">
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
                       {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
                     </p>
                   </div>
                 </div>
-                <div className="flex space-x-2">
+                <div className="flex items-center space-x-2 flex-shrink-0">
                   <button
                     onClick={() => setSelectedFile(null)}
                     disabled={isLoading}
-                    className="px-3 py-1 text-sm text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-50"
+                    className="p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-zinc-700 rounded-lg transition-colors"
                   >
-                    Cancel
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
                   </button>
                   <button
                     onClick={analyzeFile}
                     disabled={isLoading}
-                    className="px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="px-5 py-2.5 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg font-semibold hover:from-green-600 hover:to-emerald-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-md hover:shadow-lg"
                   >
-                    {isLoading ? 'Analyzing...' : 'Analyze'}
+                    {isLoading ? (
+                      <span className="flex items-center space-x-2">
+                        <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <span>Analyzing...</span>
+                      </span>
+                    ) : (
+                      <span className="flex items-center space-x-2">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
+                        <span>Analyze</span>
+                      </span>
+                    )}
                   </button>
                 </div>
               </div>
@@ -524,76 +572,147 @@ export default function ChatInterface() {
         {/* Streaming Analysis Section */}
         {streamingAnalysis && (
           <div className="space-y-4">
-            <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
-              Analysis (Streaming...)
-            </h2>
-            <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-6 border border-blue-200 dark:border-blue-800 animate-pulse">
-              <div className="flex items-start justify-between mb-3">
-                <div>
-                  <h3 className="text-md font-semibold text-zinc-900 dark:text-zinc-50">
-                    {streamingAnalysis.fileName}
-                  </h3>
-                  <p className="text-xs text-zinc-600 dark:text-zinc-400 mt-1">
-                    {streamingAnalysis.timestamp.toLocaleString()}
-                  </p>
+            <div className="flex items-center space-x-3">
+              <div className="flex items-center space-x-2">
+                <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"></div>
+                <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+              </div>
+              <h2 className="text-lg font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                Live Analysis
+              </h2>
+            </div>
+            <div className="bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 dark:from-blue-900/20 dark:via-purple-900/20 dark:to-pink-900/20 rounded-2xl p-6 border border-blue-200 dark:border-blue-800 shadow-lg animate-pulse">
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex-1">
+                  <div className="flex items-center space-x-3 mb-2">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-lg">
+                      <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+                        {streamingAnalysis.fileName}
+                      </h3>
+                      <p className="text-xs text-gray-600 dark:text-gray-400 flex items-center space-x-2">
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span>{streamingAnalysis.timestamp.toLocaleString()}</span>
+                      </p>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" />
-                  <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce delay-100" />
-                  <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce delay-200" />
+                <div className="flex-shrink-0">
+                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300">
+                    Generating
+                  </span>
                 </div>
               </div>
-              <div className="mt-4 text-sm text-zinc-800 dark:text-zinc-200 whitespace-pre-wrap">
-                {streamingAnalysis.content}
-                <span className="inline-block w-2 h-4 bg-blue-500 animate-pulse ml-1" />
+              <div className="mt-4 text-sm">
+                <MarkdownRenderer content={streamingAnalysis.content} />
+                <span className="inline-block w-0.5 h-5 bg-gradient-to-r from-blue-500 to-purple-600 animate-pulse ml-1 align-middle" />
               </div>
 
               {/* Session Files (for streaming) */}
               {streamingAnalysis.files && streamingAnalysis.files.length > 0 && (
-                <div className="mt-4 pt-4 border-t border-blue-200 dark:border-blue-700">
-                  <h4 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50 mb-2">
-                    📎 Session Files ({streamingAnalysis.files.length})
+                <div className="mt-6 pt-6 border-t border-blue-200 dark:border-blue-700">
+                  <h4 className="text-sm font-bold text-gray-900 dark:text-white mb-3 flex items-center space-x-2">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                    </svg>
+                    <span>Session Files</span>
+                    <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300">
+                      {streamingAnalysis.files.length}
+                    </span>
                   </h4>
-                  <div className="space-y-2">
+                  <div className="grid grid-cols-1 gap-3">
                     {streamingAnalysis.files.map((file) => (
                       <div
                         key={file.name}
-                        className="flex items-center justify-between p-2 bg-white dark:bg-zinc-800 rounded border border-blue-200 dark:border-blue-700"
+                        className="flex items-center justify-between p-3 bg-white dark:bg-zinc-800 rounded-xl border border-blue-200 dark:border-blue-700 hover:shadow-md transition-shadow"
                       >
-                        <div className="flex items-center space-x-2">
-                          <span className="text-lg">{isPdfFile(file.originalName) ? '📕' : isMarkdownFile(file.originalName) ? '📝' : '📄'}</span>
-                          <div>
-                            <p className="text-sm font-medium text-zinc-900 dark:text-zinc-50">
+                        <div className="flex items-center space-x-3 flex-1 min-w-0">
+                          <div className="flex-shrink-0">
+                            {isPdfFile(file.originalName) ? (
+                              <div className="w-10 h-10 rounded-lg bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+                                <svg className="w-5 h-5 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                                </svg>
+                              </div>
+                            ) : isMarkdownFile(file.originalName) ? (
+                              <div className="w-10 h-10 rounded-lg bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
+                                <svg className="w-5 h-5 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                </svg>
+                              </div>
+                            ) : (
+                              <div className="w-10 h-10 rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+                                <svg className="w-5 h-5 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                                </svg>
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">
                               {file.originalName}
                             </p>
-                            <p className="text-xs text-zinc-500">
+                            <p className="text-xs text-gray-500 dark:text-gray-400">
                               {(file.size / 1024).toFixed(2)} KB
                             </p>
                           </div>
                         </div>
-                        <div className="flex space-x-2">
+                        <div className="flex items-center space-x-2 flex-shrink-0">
                           {isMarkdownFile(file.originalName) && (
                             <button
                               onClick={() => convertMarkdownToPdf(streamingAnalysis.sessionId, file.name)}
                               disabled={convertingFiles.has(file.name)}
-                              className="px-3 py-1 text-xs bg-purple-600 text-white rounded hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                              className="inline-flex items-center px-3 py-1.5 text-xs font-semibold rounded-lg bg-gradient-to-r from-purple-500 to-purple-600 text-white hover:from-purple-600 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-sm hover:shadow"
                             >
-                              {convertingFiles.has(file.name) ? 'Converting...' : 'Convert to PDF'}
+                              {convertingFiles.has(file.name) ? (
+                                <span className="flex items-center space-x-1">
+                                  <svg className="animate-spin h-3 w-3" fill="none" viewBox="0 0 24 24">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                  </svg>
+                                  <span>Converting...</span>
+                                </span>
+                              ) : (
+                                <span className="flex items-center space-x-1">
+                                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                                  </svg>
+                                  <span>PDF</span>
+                                </span>
+                              )}
                             </button>
                           )}
                           {isPdfFile(file.originalName) && (
                             <button
                               onClick={() => openPdfPreview(streamingAnalysis.sessionId, file.name)}
-                              className="px-3 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
+                              className="inline-flex items-center px-3 py-1.5 text-xs font-semibold rounded-lg bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:from-green-600 hover:to-emerald-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-all duration-200 shadow-sm hover:shadow"
                             >
-                              Preview
+                              <span className="flex items-center space-x-1">
+                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                </svg>
+                                <span>Preview</span>
+                              </span>
                             </button>
                           )}
                           <button
                             onClick={() => downloadFile(streamingAnalysis.sessionId, file.name, file.originalName)}
-                            className="px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                            className="inline-flex items-center px-3 py-1.5 text-xs font-semibold rounded-lg bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200 shadow-sm hover:shadow"
                           >
-                            Download
+                            <span className="flex items-center space-x-1">
+                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                              </svg>
+                              <span>Download</span>
+                            </span>
                           </button>
                         </div>
                       </div>
@@ -626,8 +745,8 @@ export default function ChatInterface() {
                     </p>
                   </div>
                 </div>
-                <div className="mt-4 text-sm text-zinc-800 dark:text-zinc-200 whitespace-pre-wrap">
-                  {analysis.content}
+                <div className="mt-4 text-sm">
+                  <MarkdownRenderer content={analysis.content} />
                 </div>
 
                 {/* Session Files */}
@@ -709,9 +828,9 @@ export default function ChatInterface() {
                         : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50'
                     }`}
                   >
-                    <p className="text-sm whitespace-pre-wrap break-words">
-                      {message.content}
-                    </p>
+                    <div className="text-sm break-words">
+                      <MarkdownRenderer content={message.content} />
+                    </div>
                   </div>
                 </div>
               ))}
@@ -720,10 +839,10 @@ export default function ChatInterface() {
               {streamingMessage && (
                 <div className="flex justify-start">
                   <div className="max-w-[80%] rounded-2xl px-4 py-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 text-zinc-900 dark:text-zinc-50">
-                    <p className="text-sm whitespace-pre-wrap break-words">
-                      {streamingMessage.content}
-                      <span className="inline-block w-2 h-4 bg-blue-500 animate-pulse ml-1" />
-                    </p>
+                    <div className="text-sm break-words">
+                      <MarkdownRenderer content={streamingMessage.content} />
+                      <span className="inline-block w-2 h-4 bg-blue-500 animate-pulse ml-1 align-middle" />
+                    </div>
                   </div>
                 </div>
               )}
@@ -733,15 +852,15 @@ export default function ChatInterface() {
 
         {isLoading && (
           <div className="flex justify-start">
-            <div className="bg-zinc-100 dark:bg-zinc-800 rounded-2xl px-4 py-3 max-w-md">
+            <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-zinc-800 dark:to-zinc-900 rounded-2xl px-5 py-4 max-w-md shadow-md border border-gray-200 dark:border-zinc-700">
               <div className="flex items-center space-x-3">
                 <div className="flex space-x-2">
-                  <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" />
-                  <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce delay-100" />
-                  <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce delay-200" />
+                  <div className="w-2.5 h-2.5 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full animate-bounce"></div>
+                  <div className="w-2.5 h-2.5 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                  <div className="w-2.5 h-2.5 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
                 </div>
                 {progressMessage && (
-                  <p className="text-sm text-zinc-600 dark:text-zinc-400">{progressMessage}</p>
+                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{progressMessage}</p>
                 )}
               </div>
             </div>
@@ -752,42 +871,68 @@ export default function ChatInterface() {
       </div>
 
       {/* Chat Input */}
-      <div className="flex-none p-4 border-t border-zinc-200 dark:border-zinc-800">
-        <form onSubmit={sendMessage} className="flex gap-2">
-          <input
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Ask follow-up questions about the analysis..."
-            disabled={isLoading}
-            className="flex-1 px-4 py-3 rounded-full border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-black text-zinc-900 dark:text-zinc-50 placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
-          />
+      <div className="flex-none px-6 py-4 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-lg border-t border-gray-200 dark:border-zinc-800 shadow-lg">
+        <form onSubmit={sendMessage} className="flex gap-3 items-end">
+          <div className="flex-1 relative">
+            <input
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="Ask follow-up questions about the analysis..."
+              disabled={isLoading}
+              className="w-full px-5 py-3.5 pr-12 rounded-2xl border border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-sm"
+            />
+            <div className="absolute right-3 top-1/2 -translate-y-1/2">
+              <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+              </svg>
+            </div>
+          </div>
           <button
             type="submit"
             disabled={isLoading || !input.trim()}
-            className="px-6 py-3 bg-blue-600 text-white rounded-full font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="group px-6 py-3.5 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-semibold hover:from-blue-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-md hover:shadow-lg flex-shrink-0"
           >
-            Send
+            <span className="flex items-center space-x-2">
+              <span className="hidden sm:inline">Send</span>
+              <svg className="w-5 h-5 group-hover:translate-x-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+              </svg>
+            </span>
           </button>
         </form>
       </div>
 
       {/* PDF Preview Modal */}
       {previewPdf && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-2xl w-full max-w-6xl h-[90vh] flex flex-col">
-            <div className="flex items-center justify-between p-4 border-b border-zinc-200 dark:border-zinc-700">
-              <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
-                PDF Preview
-              </h3>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl w-full max-w-7xl h-[92vh] flex flex-col animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-zinc-700 bg-gray-50 dark:bg-zinc-800/50 rounded-t-2xl">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-red-500 to-pink-600 flex items-center justify-center shadow-lg">
+                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+                    PDF Preview
+                  </h3>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    {previewPdf.filename}
+                  </p>
+                </div>
+              </div>
               <button
                 onClick={closePdfPreview}
-                className="px-4 py-2 bg-zinc-200 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 rounded-lg hover:bg-zinc-300 dark:hover:bg-zinc-700 transition-colors"
+                className="group p-2 hover:bg-gray-200 dark:hover:bg-zinc-700 rounded-xl transition-colors focus:outline-none focus:ring-2 focus:ring-gray-400 dark:focus:ring-zinc-600"
               >
-                Close
+                <svg className="w-6 h-6 text-gray-600 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
               </button>
             </div>
-            <div className="flex-1 overflow-hidden">
+            <div className="flex-1 overflow-hidden bg-gray-100 dark:bg-zinc-950">
               <iframe
                 src={`/api/sessions/${previewPdf.sessionId}/files/${previewPdf.filename}`}
                 className="w-full h-full border-0"

@@ -131,21 +131,6 @@ export default function LoginPage() {
               )}
             </button>
           </form>
-
-          {/* Help Text */}
-          <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
-            <p className="text-sm text-gray-600 dark:text-gray-400 text-center">
-              需要访问令牌？
-              <a href="mailto:support@example.com" className="text-blue-600 dark:text-blue-400 hover:underline ml-1">
-                联系管理员
-              </a>
-            </p>
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div className="mt-8 text-center text-sm text-gray-600 dark:text-gray-400">
-          <p>🔒 安全登录 · JWT 会话认证 · HTTP-Only Cookie</p>
         </div>
       </div>
     </div>

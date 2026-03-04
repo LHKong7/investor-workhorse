@@ -4,8 +4,8 @@ import {
   deleteSession,
   exportSession,
   exportSessionAsMarkdown,
-  readSessionFile
-} from '@/lib/session-storage';
+  getSessionFile
+} from '@/lib/blob-session-storage';
 
 type RouteContext = {
   params: Promise<{ id: string }>;

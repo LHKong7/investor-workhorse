@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSessionData, readSessionFile, saveSessionFileFromContent } from '@/lib/session-storage';
+import { getSessionData, getSessionFile, saveSessionFileFromContent } from '@/lib/blob-session-storage';
 import { convertMarkdownToPDF, isMarkdownFile } from '@/lib/pdf-generator';
 
 type RouteContext = {
@@ -52,8 +52,9 @@ export async function POST(
     }
 
     // Read the Markdown file
-    const markdownBuffer = await readSessionFile(id, filename);
-    const markdownContent = markdownBuffer.toString('utf-8');
+    const markdownUrl = await getSessionFile(id, filename);
+    const markdownResponse = await fetch(markdownUrl);
+    const markdownContent = await markdownResponse.text();
 
     // Generate PDF
     const pdfBuffer = await convertMarkdownToPDF(

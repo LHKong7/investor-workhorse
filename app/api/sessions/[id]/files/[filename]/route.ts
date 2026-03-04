@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { readSessionFile } from '@/lib/session-storage';
-import { getSessionData } from '@/lib/session-storage';
+import { getSessionFile } from '@/lib/blob-session-storage';
+import { getSessionData } from '@/lib/blob-session-storage';
 
 type RouteContext = {
   params: Promise<{ id: string; filename: string }>;
@@ -34,8 +34,19 @@ export async function GET(
       );
     }
 
-    // Read file content
-    const buffer = await readSessionFile(id, filename);
+    // Get file URL from blob storage
+    const fileUrl = await getSessionFile(id, filename);
+
+    // Fetch the file content from the blob URL
+    const response = await fetch(fileUrl);
+    if (!response.ok) {
+      return NextResponse.json(
+        { error: 'Failed to fetch file from storage' },
+        { status: 500 }
+      );
+    }
+
+    const buffer = Buffer.from(await response.arrayBuffer());
 
     // Determine content type
     const ext = filename.split('.').pop()?.toLowerCase();

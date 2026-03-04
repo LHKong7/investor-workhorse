@@ -9,8 +9,9 @@ import {
   addSessionMessage,
   getSessionData,
   createFileWriterTool
-} from '@/lib/session-storage';
+} from '@/lib/blob-session-storage';
 import { validateApiAuth } from '@/lib/api-auth';
+import { createVercelBlobStorage } from '@/lib/vercel-agent-storage';
 
 // Load configuration and generate system prompt
 const config = loadFinancialAnalystConfig();
@@ -20,6 +21,7 @@ const modelConfig = getModelConfig(config);
 console.log("Financial Analyst System Prompt:\n", systemPrompt);
 
 // Initialize the agent for financial analysis with streaming enabled
+// 使用 Vercel Blob 自定义存储后端
 const baseAgent = new AgentBuilder()
   .setLLM({
     apiKey: process.env.OPENAI_API_KEY!,
@@ -29,6 +31,7 @@ const baseAgent = new AgentBuilder()
   .setSystemPrompt(systemPrompt)
   .setIncludeBuiltinTools(true)
   .enableStreaming(true)  // Enable streaming
+  .setStorage({ backend: 'memory', custom: createVercelBlobStorage() })  // 使用 Vercel Blob 存储
   .build();
 
 // Create a function to get agent with session-specific tools
@@ -44,6 +47,7 @@ function getAgentForSession(sessionId: string) {
     .setSystemPrompt(systemPrompt)
     .setIncludeBuiltinTools(true)
     .enableStreaming(true)
+    .setStorage({ backend: 'memory', custom: createVercelBlobStorage() })  // 使用 Vercel Blob 存储
     .addTool(fileWriterTool)
     .build();
 }
@@ -218,18 +222,23 @@ export async function POST(req: NextRequest) {
           });
 
           // Get or create session
-          let session = baseAgent.restoreSession(sessionId ?? '');
+          let session = await baseAgent.restoreSession(sessionId ?? '');
 
           if (!session) {
             // Create new session
-            session = baseAgent.createSession();
+            session = await baseAgent.createSession();
             // Initialize session folder
             await initializeSession(session.id, `Financial Analysis - ${file.name}`);
           }
 
           // Get session-specific agent with file writer tool
           const sessionAgent = getAgentForSession(session.id);
-          const sessionWithTool = sessionAgent.restoreSession(session.id) || sessionAgent.createSession();
+
+          // Try to restore existing session, or create a new one
+          let sessionWithTool = await sessionAgent.restoreSession(session.id);
+          if (!sessionWithTool) {
+            sessionWithTool = await sessionAgent.createSession();
+          }
 
           // Save the uploaded file to session
           const bytes = await file.arrayBuffer();

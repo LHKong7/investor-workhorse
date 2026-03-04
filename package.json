@@ -9,8 +9,8 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "agentic-system": "file:../../_1_a/agentic_system/TypeScript",
-    "borderless-agent": "^0.0.1-alpha.1",
+    "@vercel/blob": "^2.3.0",
+    "borderless-agent": "^0.0.1-alpha.3",
     "google-auth-library": "^9.15.1",
     "google-spreadsheet": "^4.1.1",
     "jose": "^6.1.3",
@@ -21,7 +21,11 @@
     "pdf2json": "^4.0.2",
     "puppeteer": "^24.37.5",
     "react": "19.2.3",
-    "react-dom": "19.2.3"
+    "react-dom": "19.2.3",
+    "react-markdown": "^10.1.0",
+    "rehype-highlight": "^7.0.2",
+    "rehype-raw": "^7.0.0",
+    "remark-gfm": "^4.0.1"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
@@ -30,6 +34,7 @@
     "@types/pdf-parse": "^1.1.5",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "dotenv": "^17.3.1",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
     "tailwindcss": "^4",

@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "postinstall": "node scripts/patch-borderless-agent.js"
   },
   "dependencies": {
     "@vercel/blob": "^2.3.0",

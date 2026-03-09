@@ -263,6 +263,7 @@ export async function POST(req: NextRequest) {
           const streamGenerator = sessionWithTool.stream(analysisPrompt);
 
           let fullContent = '';
+          let fullReasoningContent = '';
 
           for await (const chunk of streamGenerator) {
             if (chunk.delta) {
@@ -274,11 +275,20 @@ export async function POST(req: NextRequest) {
               });
             }
 
+            // Capture reasoning_content if available
+            if (chunk.reasoning_content) {
+              fullReasoningContent += chunk.reasoning_content;
+              sendEvent('reasoning', {
+                content: chunk.reasoning_content,
+                sessionId: session.id,
+              });
+            }
+
             if (chunk.done) {
               const finalContent = chunk.reply || fullContent;
 
-              // Save assistant response to session
-              await addSessionMessage(session.id, 'assistant', finalContent);
+              // Save assistant response to session with reasoning content
+              await addSessionMessage(session.id, 'assistant', finalContent, fullReasoningContent);
 
               // Record analysis completion step
               await addAnalysisStep(session.id, {

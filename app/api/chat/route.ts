@@ -154,6 +154,7 @@ export async function POST(req: NextRequest) {
           const streamGenerator = sessionWithTool.stream(message);
 
           let fullContent = '';
+          let fullReasoningContent = '';
 
           for await (const chunk of streamGenerator) {
             if (chunk.delta) {
@@ -165,11 +166,20 @@ export async function POST(req: NextRequest) {
               });
             }
 
+            // Capture reasoning_content if available
+            if (chunk.reasoning_content) {
+              fullReasoningContent += chunk.reasoning_content;
+              sendEvent('reasoning', {
+                content: chunk.reasoning_content,
+                sessionId: agentSession.id,
+              });
+            }
+
             if (chunk.done) {
               const finalContent = chunk.reply || fullContent;
 
-              // Save assistant response to session
-              await addSessionMessage(agentSession.id, 'assistant', finalContent);
+              // Save assistant response to session with reasoning content
+              await addSessionMessage(agentSession.id, 'assistant', finalContent, fullReasoningContent);
 
               // Send the final complete reply
               sendEvent('reply', {

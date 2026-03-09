@@ -23,6 +23,7 @@ export interface SessionMessage {
   role: 'user' | 'assistant';
   content: string;
   timestamp: string;
+  reasoning_content?: string; // 思考过程内容
 }
 
 export interface SessionData {
@@ -136,18 +137,26 @@ export async function saveSessionFile(
 export async function addSessionMessage(
   sessionId: string,
   role: 'user' | 'assistant',
-  content: string
+  content: string,
+  reasoningContent?: string // 可选的思考过程内容
 ): Promise<void> {
   const sessionDir = getSessionDir(sessionId);
   const messagesPath = path.join(sessionDir, 'messages.json');
 
   const messages: SessionMessage[] = JSON.parse(await readFile(messagesPath, 'utf-8'));
 
-  messages.push({
+  const message: SessionMessage = {
     role,
     content,
     timestamp: new Date().toISOString(),
-  });
+  };
+
+  // 如果提供了思考过程，添加到消息中
+  if (reasoningContent) {
+    message.reasoning_content = reasoningContent;
+  }
+
+  messages.push(message);
 
   await writeFile(messagesPath, JSON.stringify(messages, null, 2));
 

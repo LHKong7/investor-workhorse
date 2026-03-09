@@ -1,12 +1,14 @@
 #!/usr/bin/env node
 
 /**
- * Patch borderless-agent to support memory and Vercel Blob storage backends
+ * Patch borderless-agent to support memory and Vercel Blob storage backends,
+ * and reasoning_content field
  *
  * This script modifies the borderless-agent package to add proper
  * support for:
  * - AGENT_STORAGE_BACKEND=memory: prevents agent sessions from writing to local filesystem
  * - AGENT_STORAGE_BACKEND=cloud: uses Vercel Blob for persistent cloud storage
+ * - reasoning_content: captures thinking process from models like o1
  *
  * Run automatically after npm install via postinstall script.
  */
@@ -21,7 +23,10 @@ const VERCEL_BLOB_BACKEND_JS = path.join(STORAGE_DIR, 'vercelBlobBackend.js');
 const VERCEL_BLOB_BACKEND_DTS = path.join(STORAGE_DIR, 'vercelBlobBackend.d.ts');
 const INDEX_JS = path.join(STORAGE_DIR, 'index.js');
 
-console.log('🔧 Patching borderless-agent storage backends...\n');
+const LLM_PROTOCOL_JS = path.join(process.cwd(), 'node_modules/borderless-agent/dist/llmProtocol.js');
+const TYPES_DTS = path.join(process.cwd(), 'node_modules/borderless-agent/dist/types.d.ts');
+
+console.log('🔧 Patching borderless-agent...\n');
 
 /**
  * Create memoryBackend.js
@@ -591,6 +596,132 @@ function patchIndexJS() {
 }
 
 /**
+ * Patch llmProtocol.js to extract reasoning_content
+ */
+function patchLLMProtocolForReasoning() {
+  if (!fs.existsSync(LLM_PROTOCOL_JS)) {
+    console.log('⚠️  llmProtocol.js not found. Skipping reasoning_content patch.\n');
+    return;
+  }
+
+  let content = fs.readFileSync(LLM_PROTOCOL_JS, 'utf-8');
+
+  // Check if already patched
+  if (content.includes('reasoning_content')) {
+    console.log('✅ llmProtocol.js already patched for reasoning_content');
+    return;
+  }
+
+  // Patch the _chatStream function to capture reasoning_content
+  const oldStreamChunk = `                yield {
+                    content: part,
+                    toolCalls: [],
+                    usage: {},
+                    model: this._model,
+                };`;
+
+  const newStreamChunk = `                yield {
+                    content: part,
+                    reasoning_content: delta?.reasoning_content || null,
+                    toolCalls: [],
+                    usage: {},
+                    model: this._model,
+                };`;
+
+  if (content.includes(oldStreamChunk)) {
+    content = content.replace(oldStreamChunk, newStreamChunk);
+  }
+
+  // Patch the final yield in _chatStream
+  const oldFinalYield = `        yield {
+            content: fullContent || null,
+            toolCalls: toolCallsOut,
+            usage,
+            model: this._model,
+        };`;
+
+  const newFinalYield = `        yield {
+            content: fullContent || null,
+            reasoning_content: null, // Final chunk has content but no delta
+            toolCalls: toolCallsOut,
+            usage,
+            model: this._model,
+        };`;
+
+  if (content.includes(oldFinalYield)) {
+    content = content.replace(oldFinalYield, newFinalYield);
+  }
+
+  // Patch _chatNonStream to include reasoning_content
+  const oldNonStreamReturn = `        return {
+            content: (msg.content ?? '').trim() || null,
+            toolCalls,
+            usage,
+            model: this._model,
+        };`;
+
+  const newNonStreamReturn = `        return {
+            content: (msg.content ?? '').trim() || null,
+            reasoning_content: (msg.reasoning_content ?? '').trim() || null,
+            toolCalls,
+            usage,
+            model: this._model,
+        };`;
+
+  if (content.includes(oldNonStreamReturn)) {
+    content = content.replace(oldNonStreamReturn, newNonStreamReturn);
+  }
+
+  fs.writeFileSync(LLM_PROTOCOL_JS, content, 'utf-8');
+  console.log('✅ Patched llmProtocol.js to support reasoning_content');
+}
+
+/**
+ * Patch types.d.ts to add reasoning_content to StreamChunk
+ */
+function patchTypesForReasoning() {
+  if (!fs.existsSync(TYPES_DTS)) {
+    console.log('⚠️  types.d.ts not found. Skipping reasoning_content patch.\n');
+    return;
+  }
+
+  let content = fs.readFileSync(TYPES_DTS, 'utf-8');
+
+  // Check if already patched
+  if (content.includes('reasoning_content')) {
+    console.log('✅ types.d.ts already patched for reasoning_content');
+    return;
+  }
+
+  // Add reasoning_content to StreamChunk interface
+  const oldStreamChunk = `export interface StreamChunk {
+    /** Content delta (partial text). Present on streaming chunks. */
+    delta?: string;
+    /** Final reply. Present on the last chunk. */
+    reply?: string;
+    /** Whether this is the final chunk. */
+    done: boolean;
+}`;
+
+  const newStreamChunk = `export interface StreamChunk {
+    /** Content delta (partial text). Present on streaming chunks. */
+    delta?: string;
+    /** Final reply. Present on the last chunk. */
+    reply?: string;
+    /** Whether this is the final chunk. */
+    done: boolean;
+    /** Reasoning content (for models like o1 that support it). */
+    reasoning_content?: string | null;
+}`;
+
+  if (content.includes(oldStreamChunk)) {
+    content = content.replace(oldStreamChunk, newStreamChunk);
+    fs.writeFileSync(TYPES_DTS, content, 'utf-8');
+    console.log('✅ Patched types.d.ts to support reasoning_content');
+  }
+}
+
+/**
  * Main execution
  */
 function main() {
@@ -615,12 +746,20 @@ function main() {
     // Patch index.js
     patchIndexJS();
 
+    console.log('');
+
+    // Patch for reasoning_content support
+    patchLLMProtocolForReasoning();
+    patchTypesForReasoning();
+
     console.log('='.repeat(60));
     console.log('\n✅ borderless-agent successfully patched!\n');
     console.log('💡 Available storage backends:');
     console.log('   - AGENT_STORAGE_BACKEND=cloud (Vercel Blob, persistent)');
     console.log('   - AGENT_STORAGE_BACKEND=memory (in-memory, ephemeral)');
     console.log('   - AGENT_STORAGE_BACKEND=file (local filesystem, default)\n');
+    console.log('💡 Additional features:');
+    console.log('   - reasoning_content support for models like o1\n');
     console.log('📝 This patch is applied automatically after every npm install.\n');
 
   } catch (error) {

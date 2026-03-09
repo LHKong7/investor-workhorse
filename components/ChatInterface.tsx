@@ -23,6 +23,7 @@ interface Analysis {
     duration?: number;
     metadata?: Record<string, any>;
   }>;
+  reasoningContent?: string; // 思考过程内容
 }
 
 interface SessionFile {
@@ -46,6 +47,7 @@ const isPdfFile = (filename: string): boolean => {
 interface Message {
   role: 'user' | 'assistant';
   content: string;
+  reasoningContent?: string; // 思考过程内容
 }
 
 export default function ChatInterface() {
@@ -125,6 +127,7 @@ export default function ChatInterface() {
 
     // Declare variables outside try block for error handling access
     let currentContent = '';
+    let currentReasoningContent = '';
     let fileName = selectedFile.name;
 
     try {
@@ -181,8 +184,20 @@ export default function ChatInterface() {
                   timestamp: new Date(),
                   sessionId: data.sessionId,
                   files: data.files,
+                  reasoningContent: currentReasoningContent,
                 });
                 setProgressMessage('Analyzing...');
+              } else if (currentEvent === 'reasoning') {
+                // Stream reasoning content in real-time
+                currentReasoningContent += data.content;
+                setStreamingAnalysis({
+                  fileName,
+                  content: currentContent,
+                  timestamp: new Date(),
+                  sessionId: data.sessionId,
+                  files: data.files,
+                  reasoningContent: currentReasoningContent,
+                });
               } else if (currentEvent === 'analysis') {
                 // Final complete analysis - preserve accumulated content if data.content is empty
                 currentContent = data.content || currentContent;
@@ -265,6 +280,7 @@ export default function ChatInterface() {
 
     // Declare variable outside try block for error handling access
     let currentContent = '';
+    let currentReasoningContent = '';
 
     try {
       const response = await fetch('/api/chat', {
@@ -317,8 +333,17 @@ export default function ChatInterface() {
                 setStreamingMessage({
                   role: 'assistant',
                   content: currentContent,
+                  reasoningContent: currentReasoningContent,
                 });
                 setProgressMessage('Responding...');
+              } else if (currentEvent === 'reasoning') {
+                // Stream reasoning content in real-time
+                currentReasoningContent += data.content;
+                setStreamingMessage({
+                  role: 'assistant',
+                  content: currentContent,
+                  reasoningContent: currentReasoningContent,
+                });
               } else if (currentEvent === 'reply') {
                 // Final complete reply - preserve accumulated content if data.content is empty
                 currentContent = data.content || currentContent;
